@@ -33,11 +33,25 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Preparar Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Instalar Android API 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      # El runner Ubuntu de GitHub incluye cmdline-tools. Evitamos la accion
+      # android-actions/setup-android@v3, que solicita el paquete retirado "tools".
+      - name: Preparar Android SDK sin paquete obsoleto
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_DIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          MANAGER="$SDK_DIR/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$MANAGER" ]; then
+            echo "::error::No existe sdkmanager en $MANAGER"
+            exit 1
+          fi
+          echo "ANDROID_HOME=$SDK_DIR" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_DIR" >> "$GITHUB_ENV"
+          echo "$SDK_DIR/platform-tools" >> "$GITHUB_PATH"
+          "$MANAGER" --version
+          # Evitar el codigo 141 de `yes` (SIGPIPE) cuando terminan las licencias.
+          (set +o pipefail; yes | "$MANAGER" --licenses > /dev/null)
+          "$MANAGER" --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
 
       - name: Instalar dependencias y compilar interfaz
         working-directory: riseup_app
@@ -68,3 +82,4 @@ jobs:
           path: riseup_app/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+
