@@ -1,0 +1,20 @@
+RISE UP: CONVERTIR A APK SIN ANDROID STUDIO
+
+Archivos incluidos para GitHub:
+ - RiseUp_Proyecto_Web.zip (fuentes de Rise Up)
+ - RiseUp_GitHub_Actions.yml (instrucción automática de compilación)
+
+PASO 1: Crea un repositorio NUEVO de GitHub (recomendado: Private), por ejemplo "riseup-apk".
+PASO 2: En el repositorio, elige Add file > Upload files y sube el archivo RiseUp_Proyecto_Web.zip. Confirma con Commit changes.
+PASO 3: En el repositorio elige Add file > Create new file.
+PASO 4: En el campo de nombre escribe exactamente: .github/workflows/generar-apk.yml
+PASO 5: Abre RiseUp_GitHub_Actions.yml con un editor de texto, copia TODO el contenido y pégalo en el editor web de GitHub.
+PASO 6: Guarda con Commit changes en la rama principal (main).
+PASO 7: Abre Actions > Generar APK Rise Up > Run workflow > Run workflow.
+PASO 8: Cuando la ejecución termine correctamente (icono verde), ábrela y baja a Artifacts.
+PASO 9: Descarga RiseUp-APK-Android. Descomprime el ZIP descargado de Artifacts: adentro está app-debug.apk.
+PASO 10: En tu teléfono Android, transfiere e instala app-debug.apk. Android puede pedir autorización para instalar aplicaciones de esa fuente.
+
+IMPORTANTE: El APK no está compilado todavía; GitHub Actions es el servicio que lo compilará.
+Es una versión de pruebas firmada con clave debug. Evita subir contraseñas o información sensible al repositorio.
+Si aparece una X roja en Actions, comparte captura del paso donde falló.
