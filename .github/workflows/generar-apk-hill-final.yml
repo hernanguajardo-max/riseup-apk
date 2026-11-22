@@ -1,0 +1,86 @@
+name: Generar APK Rise Up Final Hill
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  crear-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Descargar archivos del repositorio
+        uses: actions/checkout@v4
+
+      - name: Descomprimir el proyecto Rise Up
+        run: |
+          test -f RiseUp_Kit_APK_GitHub/RiseUp_Final_Hill_Para_APK.zip
+          mkdir -p riseup_app
+          unzip -q RiseUp_Kit_APK_GitHub/RiseUp_Final_Hill_Para_APK.zip -d riseup_app
+          test -f riseup_app/package.json
+          test -f riseup_app/capacitor.config.ts
+
+      - name: Preparar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Preparar Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # El runner Ubuntu de GitHub incluye cmdline-tools. Evitamos la accion
+      # android-actions/setup-android@v3, que solicita el paquete retirado "tools".
+      - name: Preparar Android SDK sin paquete obsoleto
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_DIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          MANAGER="$SDK_DIR/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$MANAGER" ]; then
+            echo "::error::No existe sdkmanager en $MANAGER"
+            exit 1
+          fi
+          echo "ANDROID_HOME=$SDK_DIR" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_DIR" >> "$GITHUB_ENV"
+          echo "$SDK_DIR/platform-tools" >> "$GITHUB_PATH"
+          "$MANAGER" --version
+          # Evitar el codigo 141 de `yes` (SIGPIPE) cuando terminan las licencias.
+          (set +o pipefail; yes | "$MANAGER" --licenses > /dev/null)
+          "$MANAGER" --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+      - name: Instalar dependencias y compilar interfaz
+        working-directory: riseup_app
+        run: |
+          npm install --no-audit --no-fund
+          # capacitor.config.ts necesita el compilador TypeScript instalado.
+          npm install --save-dev typescript --no-audit --no-fund
+          npm run typecheck
+          npm run build
+
+      - name: Crear plataforma Android con Capacitor
+        working-directory: riseup_app
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Generar APK de pruebas
+        working-directory: riseup_app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Guardar APK descargable
+        uses: actions/upload-artifact@v4
+        with:
+          name: RiseUp-Final-Hill-APK-Android
+          path: riseup_app/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
